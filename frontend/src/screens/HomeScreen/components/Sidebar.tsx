@@ -1,5 +1,4 @@
 import { LogOut, UserRound } from 'lucide-react'
-import { supabase } from '../../../providers/supabaseClient'
 import type { AuthUser } from '../../../types/auth'
 import type { Branch } from '../../../types/clinic'
 
@@ -43,14 +42,6 @@ export function Sidebar(props: SidebarProps) {
             </button>
           ))}
         </div>
-      </section>
-
-      <section className="metric-card p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold">Supabase</h2>
-          <span className={`status-dot ${supabase ? 'bg-[#16a34a]' : 'bg-[#f59e0b]'}`} />
-        </div>
-        <p className="wrap-anywhere mt-2 text-sm text-[#5e6b81]">{supabase ? 'Env พร้อมเชื่อมต่อ Supabase client' : 'เพิ่ม VITE_SUPABASE_URL และ VITE_SUPABASE_ANON_KEY เพื่อเชื่อมต่อ'}</p>
       </section>
     </aside>
   )

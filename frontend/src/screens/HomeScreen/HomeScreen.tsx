@@ -120,6 +120,8 @@ export function HomeScreen({ user, onLogout }: HomeScreenProps) {
               branches={state.dashboard.branches}
               isLoading={state.isLoading}
               roster={roster}
+              summary={aiSummary}
+              onGenerateDailySummary={state.runDailySummary}
               onGenerateRoster={state.runRosterRecommendation}
             />
           ) : (

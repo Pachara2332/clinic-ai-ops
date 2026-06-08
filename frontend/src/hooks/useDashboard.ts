@@ -8,9 +8,10 @@ import {
   type AppointmentStatus,
   type GenerateRosterPayload,
 } from '../api/appointmentsApi'
+import { generateDailySummary } from '../api/aiApi'
 import { fetchDashboard, loginDemo, updateTaskStatus } from '../api/dashboardApi'
 import { createStaff, deleteStaff, updateStaff } from '../api/staffApi'
-import type { Appointment, DashboardPayload, RosterRecommendation, Staff } from '../types/clinic'
+import type { AISummary, Appointment, DashboardPayload, RosterRecommendation, Staff } from '../types/clinic'
 
 const emptyDashboard: DashboardPayload = {
   branches: [],
@@ -52,6 +53,16 @@ function withRoster(dashboard: DashboardPayload, roster: RosterRecommendation): 
     recommendations: [
       ...dashboard.recommendations.filter((item) => !(item.branchId === roster.branchId && item.dayName === roster.dayName)),
       roster,
+    ],
+  }
+}
+
+function withAiSummary(dashboard: DashboardPayload, summary: AISummary): DashboardPayload {
+  return {
+    ...dashboard,
+    aiSummaries: [
+      ...dashboard.aiSummaries.filter((item) => item.branchId !== summary.branchId),
+      summary,
     ],
   }
 }
@@ -174,6 +185,21 @@ export function useDashboard() {
     }
   }, [])
 
+  const runDailySummary = useCallback(async (branchId: string) => {
+    setIsLoading(true)
+    try {
+      const summary = await generateDailySummary(branchId)
+      setDashboard((current) => withAiSummary(current, summary))
+      setNotice('Generated AI daily summary')
+      return summary
+    } catch {
+      setNotice('Unable to generate AI daily summary')
+      throw new Error('Unable to generate AI daily summary')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
   const addStaff = useCallback(async (payload: Omit<Staff, 'id'>) => {
     setIsLoading(true)
     try {
@@ -275,6 +301,7 @@ export function useDashboard() {
     addAppointment,
     setAppointmentStatus,
     runRosterRecommendation,
+    runDailySummary,
     addStaff,
     editStaff,
     removeStaff,

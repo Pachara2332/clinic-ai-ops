@@ -37,6 +37,7 @@ const { prismaMock } = vi.hoisted(() => ({
     },
     aISummary: {
       findMany: vi.fn(),
+      create: vi.fn(),
     },
   },
 }))
@@ -72,6 +73,12 @@ describe('clinic api', () => {
     prismaMock.kPIRecord.findMany.mockResolvedValue([])
     prismaMock.rosterRecommendation.findMany.mockResolvedValue([])
     prismaMock.aISummary.findMany.mockResolvedValue([])
+    prismaMock.aISummary.create.mockImplementation(async ({ data }: { data: { branchId: string; summary: string } }) => ({
+      id: 'summary-created',
+      branchId: data.branchId,
+      summary: data.summary,
+      generatedAt: new Date('2026-06-08T12:00:00.000Z'),
+    }))
   })
 
   async function login() {
@@ -206,5 +213,52 @@ describe('clinic api', () => {
     expect(response.body.branchId).toBe('branch-db-01')
     expect(response.body.doctors).toBe(3)
     expect(response.body.reason).toBeTruthy()
+  })
+
+  it('generates a daily AI summary from branch KPI data without requiring an external provider', async () => {
+    prismaMock.branch.findMany.mockResolvedValueOnce([
+      { id: 'branch-db-01', name: 'Bangkok', city: 'Bangkok', targetRevenue: 240000 },
+    ])
+    prismaMock.staff.findMany.mockResolvedValueOnce([
+      { id: 'staff-01', branchId: 'branch-db-01', name: 'Nurse A', role: 'NURSE', isWorking: true, taskLoad: 2 },
+    ])
+    prismaMock.patientAppointment.findMany.mockResolvedValueOnce([
+      { id: 'apt-01', branchId: 'branch-db-01', patientName: 'A', service: 'S', startsAt: new Date(), status: 'confirmed' },
+      { id: 'apt-02', branchId: 'branch-db-01', patientName: 'B', service: 'S', startsAt: new Date(), status: 'waiting' },
+    ])
+    prismaMock.sale.findMany.mockResolvedValueOnce([
+      { id: 'sale-01', branchId: 'branch-db-01', amount: 120000, service: 'Laser', soldAt: new Date() },
+    ])
+    prismaMock.task.findMany.mockResolvedValueOnce([
+      {
+        id: 'task-01',
+        branchId: 'branch-db-01',
+        staffId: 'staff-01',
+        title: 'Prepare room',
+        queueCount: 1,
+        status: 'COMPLETED',
+        startedAt: new Date(),
+        completedAt: new Date(),
+      },
+      {
+        id: 'task-02',
+        branchId: 'branch-db-01',
+        staffId: 'staff-01',
+        title: 'Confirm appointments',
+        queueCount: 1,
+        status: 'TODO',
+        startedAt: null,
+        completedAt: null,
+      },
+    ])
+
+    const response = await request(app)
+      .post('/api/ai/summary')
+      .send({ branchId: 'branch-db-01' })
+
+    expect(response.status).toBe(200)
+    expect(response.body.branchId).toBe('branch-db-01')
+    expect(response.body.summary).toContain('Bangkok')
+    expect(response.body.summary).toContain('120')
   })
 })
