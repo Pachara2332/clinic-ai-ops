@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("manager")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Branch {
+  id              String                 @id @default(cuid())
+  name            String
+  city            String
+  targetRevenue   Int
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  aiSummaries     AISummary[]
+  kpiRecords      KPIRecord[]
+  appointments    PatientAppointment[]
+  recommendations RosterRecommendation[]
+  sales           Sale[]
+  staff           Staff[]
+  tasks           Task[]
+}
+
+model Staff {
+  id         String      @id @default(cuid())
+  branchId   String
+  name       String
+  role       StaffRole
+  isWorking  Boolean     @default(true)
+  taskLoad   Int         @default(0)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  kpiRecords KPIRecord[]
+  branch     Branch      @relation(fields: [branchId], references: [id])
+  tasks      Task[]
+}
+
+model PatientAppointment {
+  id          String   @id @default(cuid())
+  branchId    String
+  patientName String
+  service     String
+  startsAt    DateTime
+  status      String   @default("confirmed")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  branch      Branch   @relation(fields: [branchId], references: [id])
+}
+
+model Sale {
+  id        String   @id @default(cuid())
+  branchId  String
+  amount    Int
+  service   String
+  soldAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+  branch    Branch   @relation(fields: [branchId], references: [id])
+}
+
+model Task {
+  id          String      @id @default(cuid())
+  branchId    String
+  staffId     String
+  title       String
+  queueCount  Int         @default(1)
+  status      TaskStatus  @default(TODO)
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  kpiRecords  KPIRecord[]
+  branch      Branch      @relation(fields: [branchId], references: [id])
+  staff       Staff       @relation(fields: [staffId], references: [id])
+}
+
+model KPIRecord {
+  id              String   @id @default(cuid())
+  branchId        String
+  staffId         String
+  taskId          String
+  durationMinutes Int
+  score           Int
+  recordedAt      DateTime @default(now())
+  branch          Branch   @relation(fields: [branchId], references: [id])
+  staff           Staff    @relation(fields: [staffId], references: [id])
+  task            Task     @relation(fields: [taskId], references: [id])
+}
+
+model RosterRecommendation {
+  id          String   @id @default(cuid())
+  branchId    String
+  dayName     String
+  doctors     Int
+  nurses      Int
+  reception   Int
+  reason      String
+  generatedAt DateTime @default(now())
+  branch      Branch   @relation(fields: [branchId], references: [id])
+}
+
+model AISummary {
+  id          String   @id @default(cuid())
+  branchId    String
+  summary     String
+  generatedAt DateTime @default(now())
+  branch      Branch   @relation(fields: [branchId], references: [id])
+}
+
+enum StaffRole {
+  DOCTOR
+  NURSE
+  RECEPTION
+  MANAGER
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+}

@@ -1,0 +1,108 @@
+import { BrainCircuit, Sparkles } from 'lucide-react'
+import { useState, type FormEvent } from 'react'
+import type { Branch, RosterRecommendation } from '../../../types/clinic'
+import type { GenerateRosterPayload } from '../../../api/appointmentsApi'
+
+type AiRecommendationPageProps = {
+  activeBranchId: string
+  branches: Branch[]
+  isLoading: boolean
+  roster?: RosterRecommendation
+  onGenerateRoster: (payload: GenerateRosterPayload) => Promise<RosterRecommendation>
+}
+
+const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+export function AiRecommendationPage({
+  activeBranchId,
+  branches,
+  isLoading,
+  roster,
+  onGenerateRoster,
+}: AiRecommendationPageProps) {
+  const [dayName, setDayName] = useState('Saturday')
+  const [error, setError] = useState('')
+  const activeBranch = branches.find((branch) => branch.id === activeBranchId)
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError('')
+    try {
+      await onGenerateRoster({ branchId: activeBranchId, dayName })
+    } catch {
+      setError('ไม่สามารถสร้างคำแนะนำจากข้อมูล database ได้')
+    }
+  }
+
+  return (
+    <section className="grid gap-4 xl:grid-cols-[360px_1fr]">
+      <form className="metric-card space-y-4 p-4" onSubmit={handleSubmit}>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold">AI Recommendation</h2>
+          <BrainCircuit size={18} className="text-[#7c3aed]" aria-hidden="true" />
+        </div>
+
+        <label className="block text-sm font-medium text-[#4d5c72]" htmlFor="roster-branch">
+          สาขา
+          <input
+            id="roster-branch"
+            className="mt-1 w-full rounded-md border border-[#d8deea] bg-[#f8fafc] px-3 py-2 text-[#172033]"
+            readOnly
+            value={activeBranch?.name ?? activeBranchId}
+          />
+        </label>
+
+        <label className="block text-sm font-medium text-[#4d5c72]" htmlFor="roster-day">
+          วัน
+          <select
+            id="roster-day"
+            className="mt-1 w-full rounded-md border border-[#d8deea] bg-white px-3 py-2 text-[#172033] outline-none focus:border-[#0f766e] focus:ring-2 focus:ring-[#0f766e]/20"
+            value={dayName}
+            onChange={(event) => setDayName(event.target.value)}
+          >
+            {days.map((day) => (
+              <option key={day} value={day}>{day}</option>
+            ))}
+          </select>
+        </label>
+
+        <button className="flex w-full items-center justify-center gap-2 rounded-md bg-[#0f766e] px-3 py-2 text-sm font-semibold text-white" disabled={isLoading} type="submit">
+          <Sparkles size={16} aria-hidden="true" />
+          Generate Roster
+        </button>
+
+        {error && <p className="rounded-md bg-[#fef2f2] px-3 py-2 text-sm text-[#b42318]">{error}</p>}
+      </form>
+
+      <section className="metric-card p-4">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Roster Result</h2>
+            <p className="mt-1 text-sm text-[#667085]">{roster?.dayName ?? dayName}</p>
+          </div>
+          <Sparkles size={18} className="text-[#ca8a04]" aria-hidden="true" />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <RosterMetric label="Doctors" value={roster?.doctors ?? 0} accent="#2563eb" />
+          <RosterMetric label="Nurses" value={roster?.nurses ?? 0} accent="#0f766e" />
+          <RosterMetric label="Reception" value={roster?.reception ?? 0} accent="#9333ea" />
+        </div>
+
+        <div className="mt-4 rounded-md border border-[#fde68a] bg-[#fffbeb] p-4">
+          <p className="text-sm font-semibold text-[#713f12]">Reason</p>
+          <p className="mt-2 leading-7 text-[#713f12]">{roster?.reason ?? '-'}</p>
+        </div>
+      </section>
+    </section>
+  )
+}
+
+function RosterMetric({ accent, label, value }: { accent: string; label: string; value: number }) {
+  return (
+    <div className="rounded-md border border-[#e3e7ef] bg-white p-4">
+      <p className="text-sm text-[#667085]">{label}</p>
+      <p className="mt-2 text-3xl font-semibold" style={{ color: accent }}>{value}</p>
+    </div>
+  )
+}
