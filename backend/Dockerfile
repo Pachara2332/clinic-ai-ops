@@ -13,4 +13,4 @@ COPY src ./src
 
 EXPOSE 4000
 
-CMD ["npm", "start"]
+CMD ["sh", "-c", "npx prisma db push && ./node_modules/.bin/tsx src/server.ts"]
